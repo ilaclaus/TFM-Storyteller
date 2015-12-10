@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<Mapa>
+    
+    <localizacion id="Castillo" >
+        <esSegura> </esSegura>
+        <conectadoCon>Montana Pueblo</conectadoCon>
+    </localizacion>
+    
+    <localizacion id="Pueblo" > 
+        <conectadoCon>Montana Castillo</conectadoCon>
+    </localizacion>
+    
+    <localizacion id="Montana" >
+        <conectadoCon>Castillo Pueblo</conectadoCon>
+    </localizacion>
+    
+</Mapa>

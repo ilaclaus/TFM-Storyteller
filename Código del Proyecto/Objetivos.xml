@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<Objetivos>
+    
+    <personaje tipo="Caballero" >
+        <objetivo>(and (esHeroe Caballero) (salvada Princesa))</objetivo>
+    </personaje>
+    
+    <personaje tipo="Dragon" >
+        <objetivo>(and (conPrinc Dragon Princesa) (enLoc Dragon Montana))</objetivo>
+    </personaje>
+    
+</Objetivos>
