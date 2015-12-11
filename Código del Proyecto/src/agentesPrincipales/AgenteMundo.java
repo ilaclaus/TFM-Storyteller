@@ -116,6 +116,7 @@ public class AgenteMundo extends Agent {
 		addBehaviour(new PersonajeEnCasa());
 		addBehaviour(new ConvertirEnHeroe());
 		addBehaviour(new MuertePersonaje());
+		addBehaviour(new PeticionesDePersonajes());
 	}
 
 	protected void takeDown() {
@@ -127,6 +128,22 @@ public class AgenteMundo extends Agent {
 			fe.printStackTrace();
 		}
 
+	}
+	
+	private class PeticionesDePersonajes extends CyclicBehaviour {
+
+		@Override
+		public void action() {
+			MessageTemplate mt = MessageTemplate.and(
+					MessageTemplate.MatchPerformative(ACLMessage.REQUEST),
+					MessageTemplate.MatchConversationId("characterRequest"));
+			ACLMessage receive = myAgent.blockingReceive(mt);
+			
+			ACLMessage reply = receive.createReply();
+			reply.setContent(estado.personajesEnLoc(receive.getContent()));
+			send(reply);
+		}
+		
 	}
 
 	private class ToPDDLfile extends CyclicBehaviour {

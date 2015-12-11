@@ -1,6 +1,8 @@
 package personajes;
 
+import java.beans.beancontext.BeanContextChildSupport;
 import java.util.ArrayList;
+import java.util.Random;
 
 import org.apache.log4j.Logger;
 
@@ -9,7 +11,10 @@ import acciones.Pasear;
 import agentesPrincipales.AgenteDirector;
 import jade.core.AID;
 import jade.core.Agent;
+import jade.core.behaviours.Behaviour;
 import jade.core.behaviours.CyclicBehaviour;
+import jade.core.behaviours.FSMBehaviour;
+import jade.core.behaviours.OneShotBehaviour;
 import jade.domain.DFService;
 import jade.domain.FIPAException;
 import jade.domain.FIPAAgentManagement.DFAgentDescription;
@@ -17,6 +22,7 @@ import jade.domain.FIPAAgentManagement.ServiceDescription;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
 import objetos.Item;
+
 
 /*
  * La idea es que los personajes (caballero, dragón y princesa) anden aleatoriamente por el mapa. 
@@ -35,12 +41,13 @@ public class Personaje extends Agent {
 
 	private int vida;
 	private ArrayList<Par> objetos;
-
+	
 	private String localizacion;
 
 	private AID agenteMundo;
 
 	private Logger logger;
+	private String persInteraccion;
 
 	class Par {
 
@@ -60,6 +67,7 @@ public class Personaje extends Agent {
 		this.objetos = new ArrayList<Par>();
 		this.localizacion = localizacion;
 		logger = Logger.getLogger(getClass().getName().substring(11));
+		persInteraccion = null;
 	}
 
 	public String marcaDeClase() {
@@ -324,18 +332,83 @@ public class Personaje extends Agent {
 	}
 	
 	public void comportamientoPaseo() {
+		/*
+		FSMBehaviour m = new FSMBehaviour(this);
+		
+		m.registerFirstState(new DarUnPaseo(), "Paseo");
+		m.registerState(new PidePersonajes(), "Pide personajes");
+		m.registerState(new Interactua(), "Interaccion");
+		
+
+		m.registerDefaultTransition("Paseo", "Pide personajes");
+		m.registerDefaultTransition("Pide personajes", "Interactua");
+		m.registerDefaultTransition("Interactua", "Paseo");
+		
 		addBehaviour(new DarUnPaseo());
+		*/
+		addBehaviour(new Pasea());
 	}
 	
-	private class DarUnPaseo extends CyclicBehaviour {
+	private class Pasea extends CyclicBehaviour {
+
+		@Override
+		public void action() {
+			(new Pasear(Personaje.this, Personaje.this.localizacion, agenteMundo)).execute();
+		}
+		
+	}
+	
+	private class DarUnPaseo extends OneShotBehaviour {
 
 		@Override
 		public void action() {
 			// TODO: Hacer que los personajes en la misma localización interactúen ¿? 
 			(new Pasear(Personaje.this, Personaje.this.localizacion, agenteMundo)).execute();
+			
+			/*
+			 * Máquina de estados: Paseo -> Pide personajes -> Saludo o Pasar de largo
+			 */
 		}
+	}
+	
+	private class PidePersonajes extends OneShotBehaviour {
 		
-		
+		// Pide personajes en localización al agente mundo
+		@Override
+		public void action() {
+			ACLMessage personajesEnMiLoc = new ACLMessage(ACLMessage.REQUEST);
+			personajesEnMiLoc.addReceiver(agenteMundo);
+			personajesEnMiLoc.setConversationId("charactersRequest");
+			personajesEnMiLoc.setReplyWith("charactersRequest" + System.currentTimeMillis());
+			personajesEnMiLoc.setContent(localizacion);
+			send(personajesEnMiLoc);
+			
+			MessageTemplate mt = MessageTemplate.and(
+					MessageTemplate.MatchPerformative(ACLMessage.INFORM),
+					MessageTemplate.MatchConversationId("characterRequest"));
+			ACLMessage receive = myAgent.blockingReceive(mt);
+			
+			String [] personajes = receive.getContent().split(" ");
+			int numPersonajes = personajes.length;
+
+			if (numPersonajes != 0) 
+				persInteraccion = personajes[(new Random()).nextInt(numPersonajes)];
+			
+			else 
+				persInteraccion = null;
+		}
+	}
+	
+	private class Interactua extends OneShotBehaviour {
+
+		@Override
+		public void action() {
+			if (persInteraccion == null)
+				System.out.println(Personaje.this.getAID() + " pasa de todo");
+			
+			else 
+				System.out.println(Personaje.this.getAID() + " pasa de " + persInteraccion);
+		}
 	}
 	
 }

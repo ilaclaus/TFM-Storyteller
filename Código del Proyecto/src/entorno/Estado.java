@@ -39,6 +39,16 @@ public class Estado {
 		
 	}
 	
+	public String personajesEnLoc(String loc) {
+		String personajes = "";
+		
+		for (String pers : persEnLoc.keySet())
+			if (persEnLoc.get(pers).equalsIgnoreCase(loc))
+				personajes = personajes + " " + pers;
+		
+		return personajes;
+	}
+	
 	public String toConPrincesa() {
 		String eh = "";
 		Iterator it;
