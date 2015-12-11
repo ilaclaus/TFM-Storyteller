@@ -137,11 +137,14 @@ public class AgenteMundo extends Agent {
 			MessageTemplate mt = MessageTemplate.and(
 					MessageTemplate.MatchPerformative(ACLMessage.REQUEST),
 					MessageTemplate.MatchConversationId("characterRequest"));
-			ACLMessage receive = myAgent.blockingReceive(mt);
+			ACLMessage receive = myAgent.receive(mt);
 			
-			ACLMessage reply = receive.createReply();
-			reply.setContent(estado.personajesEnLoc(receive.getContent()));
-			send(reply);
+			if (receive != null) {
+				ACLMessage reply = receive.createReply();
+				reply.setPerformative(ACLMessage.INFORM);
+				reply.setContent(estado.personajesEnLoc(receive.getContent()));
+				send(reply);
+			} else block();
 		}
 		
 	}

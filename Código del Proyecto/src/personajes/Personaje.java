@@ -332,7 +332,7 @@ public class Personaje extends Agent {
 	}
 	
 	public void comportamientoPaseo() {
-		/*
+		
 		FSMBehaviour m = new FSMBehaviour(this);
 		
 		m.registerFirstState(new DarUnPaseo(), "Paseo");
@@ -344,9 +344,9 @@ public class Personaje extends Agent {
 		m.registerDefaultTransition("Pide personajes", "Interactua");
 		m.registerDefaultTransition("Interactua", "Paseo");
 		
-		addBehaviour(new DarUnPaseo());
-		*/
-		addBehaviour(new Pasea());
+		addBehaviour(m);
+		
+		//addBehaviour(new Pasea());
 	}
 	
 	private class Pasea extends CyclicBehaviour {
