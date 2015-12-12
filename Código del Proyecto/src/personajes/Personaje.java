@@ -337,7 +337,7 @@ public class Personaje extends Agent {
 		
 		m.registerFirstState(new DarUnPaseo(), "Paseo");
 		m.registerState(new PidePersonajes(), "Pide personajes");
-		m.registerState(new Interactua(), "Interaccion");
+		m.registerState(new Interactua(), "Interactua");
 		
 
 		m.registerDefaultTransition("Paseo", "Pide personajes");
@@ -378,9 +378,9 @@ public class Personaje extends Agent {
 		public void action() {
 			ACLMessage personajesEnMiLoc = new ACLMessage(ACLMessage.REQUEST);
 			personajesEnMiLoc.addReceiver(agenteMundo);
-			personajesEnMiLoc.setConversationId("charactersRequest");
+			personajesEnMiLoc.setConversationId("characterRequest");
 			personajesEnMiLoc.setReplyWith("charactersRequest" + System.currentTimeMillis());
-			personajesEnMiLoc.setContent(localizacion);
+			personajesEnMiLoc.setContent(localizacion + " " + getName().split("@")[0]);
 			send(personajesEnMiLoc);
 			
 			MessageTemplate mt = MessageTemplate.and(
@@ -391,7 +391,7 @@ public class Personaje extends Agent {
 			String [] personajes = receive.getContent().split(" ");
 			int numPersonajes = personajes.length;
 
-			if (numPersonajes != 0) 
+			if (!personajes[0].equalsIgnoreCase("")) 
 				persInteraccion = personajes[(new Random()).nextInt(numPersonajes)];
 			
 			else 
@@ -404,10 +404,10 @@ public class Personaje extends Agent {
 		@Override
 		public void action() {
 			if (persInteraccion == null)
-				System.out.println(Personaje.this.getAID() + " pasa de todo");
+				System.out.println(Personaje.this.getName().split("@")[0] + " pasa de todo");
 			
 			else 
-				System.out.println(Personaje.this.getAID() + " pasa de " + persInteraccion);
+				System.out.println(Personaje.this.getName().split("@")[0] + " pasa de " + persInteraccion);
 		}
 	}
 	

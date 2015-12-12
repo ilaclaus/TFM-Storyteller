@@ -140,9 +140,10 @@ public class AgenteMundo extends Agent {
 			ACLMessage receive = myAgent.receive(mt);
 			
 			if (receive != null) {
+				String [] content = receive.getContent().split(" ");
 				ACLMessage reply = receive.createReply();
 				reply.setPerformative(ACLMessage.INFORM);
-				reply.setContent(estado.personajesEnLoc(receive.getContent()));
+				reply.setContent(estado.personajesEnLoc(content[0], content[1]));
 				send(reply);
 			} else block();
 		}

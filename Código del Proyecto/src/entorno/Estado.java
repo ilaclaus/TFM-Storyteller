@@ -39,12 +39,12 @@ public class Estado {
 		
 	}
 	
-	public String personajesEnLoc(String loc) {
+	public String personajesEnLoc(String loc, String personaje) {
 		String personajes = "";
 		
 		for (String pers : persEnLoc.keySet())
-			if (persEnLoc.get(pers).equalsIgnoreCase(loc))
-				personajes = personajes + " " + pers;
+			if (persEnLoc.get(pers).equalsIgnoreCase(loc) && !pers.equalsIgnoreCase(personaje))
+				personajes = pers + " " + personajes;
 		
 		return personajes;
 	}
