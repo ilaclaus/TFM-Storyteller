@@ -405,7 +405,7 @@ public class Personaje extends Agent {
 		@Override
 		public void action() {
 			if (persInteraccion == null)
-				System.out.println(Personaje.this.getName().split("@")[0] + " pasa de todo");
+				System.out.println("No hay nadie, así que " + Personaje.this.getName().split("@")[0] + " pasa de todo");
 			
 			else {
 				ACLMessage saludo = new ACLMessage(ACLMessage.INFORM);
