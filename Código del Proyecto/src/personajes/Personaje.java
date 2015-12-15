@@ -345,6 +345,7 @@ public class Personaje extends Agent {
 		m.registerDefaultTransition("Interactua", "Paseo");
 		
 		addBehaviour(m);
+		addBehaviour(new RespondeSaludo());
 		
 		//addBehaviour(new Pasea());
 	}
@@ -406,8 +407,39 @@ public class Personaje extends Agent {
 			if (persInteraccion == null)
 				System.out.println(Personaje.this.getName().split("@")[0] + " pasa de todo");
 			
-			else 
-				System.out.println(Personaje.this.getName().split("@")[0] + " pasa de " + persInteraccion);
+			else {
+				ACLMessage saludo = new ACLMessage(ACLMessage.INFORM);
+				saludo.addReceiver(new AID(persInteraccion, AID.ISLOCALNAME));
+				saludo.setConversationId("hola");
+				saludo.setReplyWith("hola" + System.currentTimeMillis());
+				send(saludo);
+
+				System.out.println(Personaje.this.getName().split("@")[0] + " saluda a " + persInteraccion);
+				
+				MessageTemplate mt = MessageTemplate.and(
+						MessageTemplate.MatchPerformative(ACLMessage.INFORM),
+						MessageTemplate.MatchConversationId("hola"));
+				ACLMessage receive = myAgent.blockingReceive(mt);
+			}
+		}
+	}
+	
+	private class RespondeSaludo extends CyclicBehaviour {
+
+		@Override
+		public void action() {
+			MessageTemplate mt = MessageTemplate.and(
+					MessageTemplate.MatchPerformative(ACLMessage.INFORM),
+					MessageTemplate.MatchConversationId("hola"));
+			ACLMessage receive = myAgent.receive(mt);
+			
+			if (receive != null) {
+				ACLMessage response = receive.createReply();
+				response.setReplyWith("hola" + System.currentTimeMillis());
+				send(response);
+				
+				System.out.println(Personaje.this.getName().split("@")[0] + " le devuelve el saludo a " + persInteraccion);
+			}
 		}
 	}
 	
