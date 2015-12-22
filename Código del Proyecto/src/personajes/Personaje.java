@@ -386,7 +386,7 @@ public class Personaje extends Agent {
 			
 			MessageTemplate mt = MessageTemplate.and(
 					MessageTemplate.MatchPerformative(ACLMessage.INFORM),
-					MessageTemplate.MatchConversationId("characterRequest"));
+					MessageTemplate.MatchInReplyTo(personajesEnMiLoc.getReplyWith()));
 			ACLMessage receive = myAgent.blockingReceive(mt);
 			
 			String [] personajes = receive.getContent().split(" ");
@@ -405,21 +405,22 @@ public class Personaje extends Agent {
 		@Override
 		public void action() {
 			if (persInteraccion == null)
-				System.out.println("No hay nadie, así que " + Personaje.this.getName().split("@")[0] + " pasa de todo");
+				System.out.println("No hay nadie en " + localizacion + ", así que " + Personaje.this.getName().split("@")[0] + " pasa de todo");
 			
 			else {
 				ACLMessage saludo = new ACLMessage(ACLMessage.INFORM);
 				saludo.addReceiver(new AID(persInteraccion, AID.ISLOCALNAME));
+				saludo.setContent(localizacion);
 				saludo.setConversationId("hola");
 				saludo.setReplyWith("hola" + System.currentTimeMillis());
 				send(saludo);
 
 				System.out.println(Personaje.this.getName().split("@")[0] + " saluda a " + persInteraccion);
 				
-				MessageTemplate mt = MessageTemplate.and(
-						MessageTemplate.MatchPerformative(ACLMessage.INFORM),
-						MessageTemplate.MatchConversationId("hola"));
-				ACLMessage receive = myAgent.blockingReceive(mt);
+//				MessageTemplate mt = MessageTemplate.and(
+//						MessageTemplate.MatchPerformative(ACLMessage.INFORM),
+//						MessageTemplate.MatchConversationId("hola"));
+//				ACLMessage receive = myAgent.blockingReceive(mt);
 			}
 		}
 	}
@@ -434,11 +435,13 @@ public class Personaje extends Agent {
 			ACLMessage receive = myAgent.receive(mt);
 			
 			if (receive != null) {
-				ACLMessage response = receive.createReply();
-				response.setReplyWith("hola" + System.currentTimeMillis());
-				send(response);
-				
-				System.out.println(Personaje.this.getName().split("@")[0] + " le devuelve el saludo a " + persInteraccion);
+				if (receive.getContent().equalsIgnoreCase(Personaje.this.localizacion)) {
+//					ACLMessage response = receive.createReply();
+//					send(response);
+					
+					System.out.println(Personaje.this.getName().split("@")[0] + " le devuelve el saludo a " + receive.getSender().getName().split("@")[0]);
+				} else 
+					System.out.println(Personaje.this.getName().split("@")[0] + " ha huído de " + receive.getSender().getName().split("@")[0]);
 			}
 		}
 	}
