@@ -1,17 +1,16 @@
 package personajes;
 
-import java.beans.beancontext.BeanContextChildSupport;
 import java.util.ArrayList;
 import java.util.Random;
 
 import org.apache.log4j.Logger;
 
+import acciones.Batalla;
 import acciones.Mover;
 import acciones.Pasear;
 import agentesPrincipales.AgenteDirector;
 import jade.core.AID;
 import jade.core.Agent;
-import jade.core.behaviours.Behaviour;
 import jade.core.behaviours.CyclicBehaviour;
 import jade.core.behaviours.FSMBehaviour;
 import jade.core.behaviours.OneShotBehaviour;
@@ -335,14 +334,13 @@ public class Personaje extends Agent {
 		
 		FSMBehaviour m = new FSMBehaviour(this);
 		
-		m.registerFirstState(new DarUnPaseo(), "Paseo");
-		m.registerState(new PidePersonajes(), "Pide personajes");
+		m.registerFirstState(new PidePersonajes(), "Pide personajes");
+		m.registerState(new DarUnPaseo(), "Paseo");
 		m.registerState(new Interactua(), "Interactua");
 		
-
-		m.registerDefaultTransition("Paseo", "Pide personajes");
 		m.registerDefaultTransition("Pide personajes", "Interactua");
 		m.registerDefaultTransition("Interactua", "Paseo");
+		m.registerDefaultTransition("Paseo", "Pide personajes");
 		
 		addBehaviour(m);
 		addBehaviour(new RespondeSaludo());
@@ -400,22 +398,29 @@ public class Personaje extends Agent {
 		}
 	}
 	
+	// TODO: Hacer que el personaje no se mueva durante la interacción
+	
 	private class Interactua extends OneShotBehaviour {
 
 		@Override
 		public void action() {
-			if (persInteraccion == null)
-				System.out.println("No hay nadie en " + localizacion + ", así que " + Personaje.this.getName().split("@")[0] + " pasa de todo");
+//			if (persInteraccion == null)
+//				System.out.println("No hay nadie en " + localizacion + ", así que " + Personaje.this.getLocalName() + " pasa de todo");
 			
-			else {
-				ACLMessage saludo = new ACLMessage(ACLMessage.INFORM);
-				saludo.addReceiver(new AID(persInteraccion, AID.ISLOCALNAME));
-				saludo.setContent(localizacion);
-				saludo.setConversationId("hola");
-				saludo.setReplyWith("hola" + System.currentTimeMillis());
-				send(saludo);
-
-				System.out.println(Personaje.this.getName().split("@")[0] + " saluda a " + persInteraccion);
+			if (persInteraccion != null) {
+				if ((Personaje.this.getLocalName().equalsIgnoreCase("Arturo") && persInteraccion.equalsIgnoreCase("Draco")))
+					(new Batalla(Personaje.this, persInteraccion)).execute();
+				
+				else {
+					ACLMessage saludo = new ACLMessage(ACLMessage.INFORM);
+					saludo.addReceiver(new AID(persInteraccion, AID.ISLOCALNAME));
+					saludo.setContent(localizacion);
+					saludo.setConversationId("hola");
+					saludo.setReplyWith("hola" + System.currentTimeMillis());
+					send(saludo);
+	
+					System.out.println(Personaje.this.getLocalName() + " saluda a " + persInteraccion);
+				}
 				
 //				MessageTemplate mt = MessageTemplate.and(
 //						MessageTemplate.MatchPerformative(ACLMessage.INFORM),
@@ -439,9 +444,9 @@ public class Personaje extends Agent {
 //					ACLMessage response = receive.createReply();
 //					send(response);
 					
-					System.out.println(Personaje.this.getName().split("@")[0] + " le devuelve el saludo a " + receive.getSender().getName().split("@")[0]);
+					System.out.println(Personaje.this.getLocalName() + " le devuelve el saludo a " + receive.getSender().getLocalName());
 				} else 
-					System.out.println(Personaje.this.getName().split("@")[0] + " ha huído de " + receive.getSender().getName().split("@")[0]);
+					System.out.println(Personaje.this.getLocalName() + " ha huído de " + receive.getSender().getLocalName());
 			}
 		}
 	}

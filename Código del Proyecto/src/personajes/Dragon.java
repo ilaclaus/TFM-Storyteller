@@ -34,6 +34,7 @@ public class Dragon extends Personaje {
 		
 		//addBehaviour(new Secuestro());
 		comportamientoPaseo();
+		addBehaviour(new Defender());
 		
 	}
 	
