@@ -8,6 +8,7 @@ import org.apache.log4j.Logger;
 import acciones.Batalla;
 import acciones.Mover;
 import acciones.Pasear;
+import acciones.Saludo;
 import agentesPrincipales.AgenteDirector;
 import jade.core.AID;
 import jade.core.Agent;
@@ -412,12 +413,13 @@ public class Personaje extends Agent {
 					(new Batalla(Personaje.this, persInteraccion)).execute();
 				
 				else {
-					ACLMessage saludo = new ACLMessage(ACLMessage.INFORM);
-					saludo.addReceiver(new AID(persInteraccion, AID.ISLOCALNAME));
-					saludo.setContent(localizacion);
-					saludo.setConversationId("hola");
-					saludo.setReplyWith("hola" + System.currentTimeMillis());
-					send(saludo);
+//					ACLMessage saludo = new ACLMessage(ACLMessage.INFORM);
+//					saludo.addReceiver(new AID(persInteraccion, AID.ISLOCALNAME));
+//					saludo.setContent(localizacion);
+//					saludo.setConversationId("hola");
+//					saludo.setReplyWith("hola" + System.currentTimeMillis());
+//					send(saludo);
+					(new Saludo(Personaje.this, persInteraccion)).execute();
 	
 					System.out.println(Personaje.this.getLocalName() + " saluda a " + persInteraccion);
 				}
@@ -436,17 +438,21 @@ public class Personaje extends Agent {
 		public void action() {
 			MessageTemplate mt = MessageTemplate.and(
 					MessageTemplate.MatchPerformative(ACLMessage.INFORM),
-					MessageTemplate.MatchConversationId("hola"));
+					MessageTemplate.MatchConversationId("Saludo"));
 			ACLMessage receive = myAgent.receive(mt);
 			
 			if (receive != null) {
-				if (receive.getContent().equalsIgnoreCase(Personaje.this.localizacion)) {
-//					ACLMessage response = receive.createReply();
-//					send(response);
-					
+//				if (receive.getContent().equalsIgnoreCase(Personaje.this.localizacion)) {
+////					ACLMessage response = receive.createReply();
+////					send(response);
+//					
 					System.out.println(Personaje.this.getLocalName() + " le devuelve el saludo a " + receive.getSender().getLocalName());
-				} else 
-					System.out.println(Personaje.this.getLocalName() + " ha huído de " + receive.getSender().getLocalName());
+					
+					ACLMessage response = receive.createReply();
+					send(response);
+					
+//				} else 
+//					System.out.println(Personaje.this.getLocalName() + " ha huído de " + receive.getSender().getLocalName());
 			}
 		}
 	}

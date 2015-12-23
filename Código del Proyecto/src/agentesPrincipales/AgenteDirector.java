@@ -49,19 +49,19 @@ public class AgenteDirector extends Agent {
 			guest = container.createNewAgent("Reinaldo", "personajes.Rey", arg);
 			guest.start();
 			agentes.add(new AID("Reinaldo", AID.ISLOCALNAME) );
-			
+			*/
 			addBehaviour(new ConfirmarInicio());
 			String[] args = {"Reinaldo"};
 			guest = container.createNewAgent("Laura", "personajes.Princesa", args);
 			guest.start();
 			agentes.add(new AID("Laura", AID.ISLOCALNAME) );
-			*/
+			
 
-			addBehaviour(new ConfirmarInicio());
-			guest = container.createNewAgent("Draco", "personajes.Dragon", null);
-			guest.start();
-			agentes.add(new AID("Draco", AID.ISLOCALNAME) );
-			addBehaviour(new ConfirmarInicio());
+//			addBehaviour(new ConfirmarInicio());
+//			guest = container.createNewAgent("Draco", "personajes.Dragon", null);
+//			guest.start();
+//			agentes.add(new AID("Draco", AID.ISLOCALNAME) );
+//			addBehaviour(new ConfirmarInicio());
 
 		} catch (Exception e) {
 			e.printStackTrace();
