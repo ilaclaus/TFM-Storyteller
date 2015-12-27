@@ -1,17 +1,12 @@
 package agentesPrincipales;
 
-import jade.core.AID;
-import jade.core.Agent;
-import jade.core.behaviours.CyclicBehaviour;
-import jade.domain.DFService;
-import jade.domain.FIPAException;
-import jade.domain.FIPAAgentManagement.DFAgentDescription;
-import jade.domain.FIPAAgentManagement.ServiceDescription;
-import jade.lang.acl.ACLMessage;
-import jade.lang.acl.MessageTemplate;
-
 import java.io.File;
 import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -24,16 +19,29 @@ import org.w3c.dom.NodeList;
 import entorno.Estado;
 import entorno.Localizacion;
 import entorno.Mapa;
+import jade.core.AID;
+import jade.core.Agent;
+import jade.core.behaviours.CyclicBehaviour;
+import jade.domain.DFService;
+import jade.domain.FIPAException;
+import jade.domain.FIPAAgentManagement.DFAgentDescription;
+import jade.domain.FIPAAgentManagement.ServiceDescription;
+import jade.lang.acl.ACLMessage;
+import jade.lang.acl.MessageTemplate;
 
 public class AgenteMundo extends Agent {
 
 	private Mapa mapa;
 	private Estado estado;
+	private List<String> buscandoPareja;
+	private Map<String, String> interacciones;
 
 	public AgenteMundo() {
 
 		this.estado = new Estado();
 		this.mapa = cargarMapa();
+		buscandoPareja = Collections.synchronizedList(new ArrayList<String>());
+		interacciones = Collections.synchronizedMap(new HashMap<String, String>());
 
 	}
 
@@ -129,25 +137,65 @@ public class AgenteMundo extends Agent {
 		}
 
 	}
-	
+
 	private class PeticionesDePersonajes extends CyclicBehaviour {
 
 		@Override
 		public void action() {
 			MessageTemplate mt = MessageTemplate.and(
 					MessageTemplate.MatchPerformative(ACLMessage.REQUEST),
-					MessageTemplate.MatchConversationId("characterRequest"));
+					MessageTemplate.MatchConversationId("peerRequest"));
 			ACLMessage receive = myAgent.receive(mt);
-			
+
+			// Añadir a la lista de los que buscan pareja. Si no está interactuando con nadie, se busca una pareja 
+			// que tampoco esté interactuando con nadie, y se añade al Map de interacciones. 
 			if (receive != null) {
-				String [] content = receive.getContent().split(" ");
-				ACLMessage reply = receive.createReply();
-				reply.setPerformative(ACLMessage.INFORM);
-				reply.setContent(estado.personajesEnLoc(content[0], content[1]));
-				send(reply);
+				String sender = receive.getSender().getLocalName();
+				buscandoPareja.add(sender);
+				
+				String pareja = buscaPareja(sender);
+				
+				// TODO: Thread-safe
+				if (!estaInteractuando(sender) && !pareja.equalsIgnoreCase("")) {
+					interacciones.put(sender, pareja);
+					interacciones.put(pareja, sender);
+					
+					ACLMessage reply = receive.createReply();
+					reply.setPerformative(ACLMessage.INFORM);
+					reply.setContent(pareja + "MSTR");
+					send(reply);
+					
+					ACLMessage msj = new ACLMessage(ACLMessage.INFORM);
+					msj.addReceiver(new AID(pareja, AID.ISLOCALNAME));
+					msj.setConversationId("peerRequest");
+					msj.setContent(sender + "SLV");
+					send(msj);
+					
+				} else if (pareja.equalsIgnoreCase("")) {
+					ACLMessage reply = receive.createReply();
+					reply.setPerformative(ACLMessage.INFORM);
+					send(reply);
+				}
+				
+				buscandoPareja.remove(sender);
 			} else block();
 		}
 		
+		private String buscaPareja(String personaje) {
+			String pareja = "";
+			
+			for (String p : buscandoPareja)
+				if (estado.estanMismaLocalizacion(personaje, p) && 
+						!p.equalsIgnoreCase(personaje) && !estaInteractuando(p))
+					pareja = p;
+			
+			return pareja;
+		}
+		
+		private boolean estaInteractuando(String personaje) {
+			return interacciones.containsKey(personaje) || interacciones.containsValue(personaje);
+		}
+
 	}
 
 	private class ToPDDLfile extends CyclicBehaviour {
@@ -254,22 +302,18 @@ public class AgenteMundo extends Agent {
 				AID personaje = receive.getSender();
 
 				String locOrigen, locDest;
-				
+
 				if (mensaje[1].equalsIgnoreCase("pasear")) {
 					locDest = mapa.dameLocAdyacente(mensaje[2]);
 				}
-				
+
 				else 
 					locDest = mensaje[1];
-				
-				
+
+
 				Localizacion loc2 = mapa.getLocalizacion(locDest);
 
 				if (mensaje.length == 3) {
-					if (mensaje[1].equalsIgnoreCase("pasear")) {
-						locOrigen = mensaje[2];
-					}
-					
 					locOrigen = mensaje[2];
 					Localizacion loc1 = mapa.getLocalizacion(locOrigen);
 
@@ -296,10 +340,17 @@ public class AgenteMundo extends Agent {
 					reply.setPerformative(ACLMessage.FAILURE);
 
 				send(reply);
+				eliminaInteraccion(personaje.getLocalName());
 
 			} else
 				block();
 		}
+		private void eliminaInteraccion(String personaje) {
+			String pareja = interacciones.get(personaje);
+			interacciones.remove(personaje);
+			interacciones.remove(pareja);
+		}
+		
 	}
 
 	private class MoverPrincesaSecuestrada extends CyclicBehaviour {
@@ -311,7 +362,7 @@ public class AgenteMundo extends Agent {
 			mt = MessageTemplate
 					.and(MessageTemplate.MatchPerformative(ACLMessage.REQUEST),
 							MessageTemplate
-									.MatchConversationId("Mundo-Mover-Princesa"));
+							.MatchConversationId("Mundo-Mover-Princesa"));
 			ACLMessage receive = myAgent.receive(mt);
 
 			if (receive != null) {

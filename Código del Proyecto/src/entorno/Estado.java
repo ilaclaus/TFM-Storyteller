@@ -39,6 +39,7 @@ public class Estado {
 		
 	}
 	
+	// Devuelve los personajes en la localización loc, a excepción del mismo
 	public String personajesEnLoc(String loc, String personaje) {
 		String personajes = "";
 		
