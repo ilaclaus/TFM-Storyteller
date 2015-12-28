@@ -50,6 +50,17 @@ public class Estado {
 		return personajes;
 	}
 	
+	// Devuelve los personajes en la misma loc que el personaje 
+		public String personajesEnLoc(String personaje) {
+			String personajes = "", loc = persEnLoc.get(personaje);
+			
+			for (String pers : persEnLoc.keySet())
+				if (persEnLoc.get(pers).equalsIgnoreCase(loc) && !pers.equalsIgnoreCase(personaje))
+					personajes = pers + " " + personajes;
+			
+			return personajes;
+		}
+	
 	public String toConPrincesa() {
 		String eh = "";
 		Iterator it;

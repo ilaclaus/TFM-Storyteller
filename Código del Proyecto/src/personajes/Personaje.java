@@ -338,12 +338,16 @@ public class Personaje extends Agent {
 		
 		m.registerFirstState(new DarUnPaseo(), "Paseo");
 		m.registerState(new PidePersonajes(), "Pide personajes");
-		m.registerState(new Interactua(), "Interactua");
+		m.registerState(new InteractuaMSTR(), "Interactua-MSTR");
+		m.registerState(new InteractuaSLV(), "Interactua-SLV");
 		
 		m.registerDefaultTransition("Paseo", "Pide personajes");
 		m.registerTransition("Pide personajes", "Paseo", 0);
-		m.registerTransition("Pide personajes", "Interactua", 1);
-		m.registerDefaultTransition("Interactua", "Paseo");
+		m.registerTransition("Pide personajes", "Interactua-MSTR", 1);
+		m.registerTransition("Pide personajes", "Interactua-SLV", 2);
+		m.registerTransition("Interactua-SLV", "Paseo", 0);
+		m.registerTransition("Interactua-SLV", "Interactua-SLV", 1);
+		m.registerDefaultTransition("Interactua-MSTR", "Paseo");
 		
 		addBehaviour(m);
 		addBehaviour(new RespondeSaludo());
@@ -410,48 +414,65 @@ public class Personaje extends Agent {
 		// 0 -> Nadie, seguir paseando
 		// 1 -> Alguien, pasar a interacción. TODO: Interacción MSTR-SLV
 		public int onEnd() {
+			// Si no tiene pareja, a pasear
 			if (persInteraccion == null)
 				return 0;
 			
-			else
+			// Si tiene pareja y es maestro, a interactuar como un maestro
+			else if (maestro)
 				return 1;
+			
+			// Si tiene pareja y es esclavo, a interactuar como un esclavo
+			else 
+				return 2;
 		}
 	}
 	
-	private class Interactua extends OneShotBehaviour {
+	private class InteractuaMSTR extends OneShotBehaviour {
 
 		@Override
 		public void action() {
-			if ((persInteraccion != null) && maestro) {
-				if ((Personaje.this.getLocalName().equalsIgnoreCase("Arturo") && persInteraccion.equalsIgnoreCase("Draco")))
-					(new Batalla(Personaje.this, persInteraccion)).execute();
-				
-				else {
-					(new Saludo(Personaje.this, persInteraccion)).execute();
-					System.out.println(Personaje.this.getLocalName() + " saluda a " + persInteraccion);
-				}
-				
-				ACLMessage interaccionCompleta = new ACLMessage(ACLMessage.INFORM);
-				interaccionCompleta.setConversationId("interaccionCompleta");
-				send(interaccionCompleta);
-				
-			} else if ((persInteraccion != null) && !maestro) {
-				// Espera recepción del mensaje de info de fin de interacción (para que no cambie de localización mientras se realiza)
-				
-				MessageTemplate mt = MessageTemplate.and(
-					MessageTemplate.MatchPerformative(ACLMessage.INFORM),
-					MessageTemplate.MatchConversationId("interaccionCompleta"));
-				
-				ACLMessage receive = myAgent.receive(mt);
-				
-				while (receive == null)
-					receive = myAgent.receive(mt);
+			// El maestro es el que ejecuta las acciones
+			if ((Personaje.this.getLocalName().equalsIgnoreCase("Arturo") && persInteraccion.equalsIgnoreCase("Draco")))
+				(new Batalla(Personaje.this, persInteraccion)).execute();
 
+			else {
+				System.out.println(Personaje.this.getLocalName() + " saluda a " + persInteraccion + " en " + localizacion);
+				(new Saludo(Personaje.this, persInteraccion)).execute();
 			}
+
+			ACLMessage interaccionCompleta = new ACLMessage(ACLMessage.INFORM);
+			interaccionCompleta.addReceiver(new AID(persInteraccion, AID.ISLOCALNAME));
+			interaccionCompleta.addReceiver(agenteMundo);
+			interaccionCompleta.setConversationId("interaccionCompleta");
+			send(interaccionCompleta);
+
 		}
 	}
 	
-	// Hacer interacción un CyclicBehaviour. 
+	private class InteractuaSLV extends OneShotBehaviour {
+
+		private ACLMessage receive;
+		
+		@Override
+		public void action() {
+			// Espera recepción del mensaje de info de fin de interacción (para que no cambie de localización mientras se realiza)
+			MessageTemplate mt = MessageTemplate.and(
+				MessageTemplate.MatchPerformative(ACLMessage.INFORM),
+				MessageTemplate.MatchConversationId("interaccionCompleta"));
+
+				receive = myAgent.receive(mt);
+		}
+		
+		public int onEnd() {
+			if (receive != null)
+				return 0;
+			
+			else 
+				return 1;
+		}
+		
+	}
 	
 	private class RespondeSaludo extends CyclicBehaviour {
 
@@ -464,7 +485,7 @@ public class Personaje extends Agent {
 			
 			if (receive != null) {
 					// Si no estan en la misma localización, no hacer nada
-					System.out.println(Personaje.this.getLocalName() + " le devuelve el saludo a " + receive.getSender().getLocalName());
+					System.out.println(Personaje.this.getLocalName() + " le devuelve el saludo a " + receive.getSender().getLocalName() + " en " + localizacion);
 					
 					ACLMessage response = receive.createReply();
 					send(response);

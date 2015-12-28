@@ -125,6 +125,7 @@ public class AgenteMundo extends Agent {
 		addBehaviour(new ConvertirEnHeroe());
 		addBehaviour(new MuertePersonaje());
 		addBehaviour(new PeticionesDePersonajes());
+		addBehaviour(new FinInteraccion());
 	}
 
 	protected void takeDown() {
@@ -137,6 +138,24 @@ public class AgenteMundo extends Agent {
 		}
 
 	}
+	
+	private class FinInteraccion extends CyclicBehaviour {
+
+		@Override
+		public void action() {
+			MessageTemplate mt = MessageTemplate.and(
+					MessageTemplate.MatchPerformative(ACLMessage.INFORM),
+					MessageTemplate.MatchConversationId("interaccionCompleta"));
+			ACLMessage receive = myAgent.receive(mt);
+			
+			if (receive != null) {
+				String mstr = receive.getSender().getLocalName(), slv = interacciones.get(mstr);
+				interacciones.remove(mstr);
+				interacciones.remove(slv);
+			}
+		}
+		
+	}
 
 	private class PeticionesDePersonajes extends CyclicBehaviour {
 
@@ -147,49 +166,55 @@ public class AgenteMundo extends Agent {
 					MessageTemplate.MatchConversationId("peerRequest"));
 			ACLMessage receive = myAgent.receive(mt);
 
-			// Añadir a la lista de los que buscan pareja. Si no está interactuando con nadie, se busca una pareja 
+			// Si no está interactuando con nadie, se busca una pareja 
 			// que tampoco esté interactuando con nadie, y se añade al Map de interacciones. 
 			if (receive != null) {
 				String sender = receive.getSender().getLocalName();
-				buscandoPareja.add(sender);
+				//buscandoPareja.add(sender);
 				
-				String pareja = buscaPareja(sender);
+
+				ACLMessage reply = receive.createReply();
+				reply.setPerformative(ACLMessage.INFORM);
 				
-				// TODO: Thread-safe
-				if (!estaInteractuando(sender) && !pareja.equalsIgnoreCase("")) {
-					interacciones.put(sender, pareja);
-					interacciones.put(pareja, sender);
+				if (interacciones.get(sender) == null) {
+					// El personaje no está interactuando, por lo que habrá que buscarle pareja
+					String pareja = buscaPareja(sender);
 					
-					ACLMessage reply = receive.createReply();
-					reply.setPerformative(ACLMessage.INFORM);
-					reply.setContent(pareja + "MSTR");
-					send(reply);
+					if (!estaInteractuando(sender) && !pareja.equalsIgnoreCase("")) {
+						interacciones.put(sender, pareja);
+						interacciones.put(pareja, sender);
+
+						reply.setContent(pareja + " MSTR");
+						send(reply);
+
+//						ACLMessage msj = new ACLMessage(ACLMessage.INFORM);
+//						msj.addReceiver(new AID(pareja, AID.ISLOCALNAME));
+//						msj.setConversationId("peerRequest");
+//						msj.setContent(sender + " SLV");
+//						send(msj);
+
+					} else if (pareja.equalsIgnoreCase("")) 
+						send(reply);	
 					
-					ACLMessage msj = new ACLMessage(ACLMessage.INFORM);
-					msj.addReceiver(new AID(pareja, AID.ISLOCALNAME));
-					msj.setConversationId("peerRequest");
-					msj.setContent(sender + "SLV");
-					send(msj);
-					
-				} else if (pareja.equalsIgnoreCase("")) {
-					ACLMessage reply = receive.createReply();
-					reply.setPerformative(ACLMessage.INFORM);
+				} else {
+					// El personaje ya tiene una pareja asignada
+					reply.setContent(interacciones.get(sender) + " SLV");
 					send(reply);
 				}
 				
-				buscandoPareja.remove(sender);
+				//buscandoPareja.remove(sender);
 			} else block();
 		}
 		
 		private String buscaPareja(String personaje) {
-			String pareja = "";
+			String [] persEnLoc = estado.personajesEnLoc(personaje).split(" ");
 			
-			for (String p : buscandoPareja)
-				if (estado.estanMismaLocalizacion(personaje, p) && 
-						!p.equalsIgnoreCase(personaje) && !estaInteractuando(p))
-					pareja = p;
+//			for (String p : buscandoPareja)
+//				if (estado.estanMismaLocalizacion(personaje, p) && 
+//						!p.equalsIgnoreCase(personaje) && !estaInteractuando(p))
+//					pareja = p;
 			
-			return pareja;
+			return persEnLoc[0];
 		}
 		
 		private boolean estaInteractuando(String personaje) {
