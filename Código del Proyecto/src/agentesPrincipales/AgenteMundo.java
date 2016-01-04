@@ -163,7 +163,7 @@ public class AgenteMundo extends Agent {
 		
 	}
 	
-	// Empareja personajes en la misma localización
+	// Para cada localización, empareja los personajes presentes 
 	private class Empareja extends CyclicBehaviour {
 
 		@Override
@@ -184,10 +184,15 @@ public class AgenteMundo extends Agent {
 		}
 		
 		public String buscaPareja(String pers) {
-			// TODO: Comprobar que la pareja no esté interactuando ya 
 			String [] persEnLoc = estado.personajesEnLoc(pers).split(" ");
+			String pareja = null;
+			Random r = new Random();
 			
-			return persEnLoc[(new Random()).nextInt(persEnLoc.length)];
+			do {
+				pareja = persEnLoc[r.nextInt(persEnLoc.length)];
+			} while (interacciones.get(pareja) != null);
+			
+			return pareja;
 		}
 		
 		public void enviaNotificacion(String mstr, String slv, String loc) {
