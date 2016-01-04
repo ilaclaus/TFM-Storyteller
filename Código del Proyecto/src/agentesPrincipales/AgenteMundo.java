@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -22,6 +23,10 @@ import entorno.Mapa;
 import jade.core.AID;
 import jade.core.Agent;
 import jade.core.behaviours.CyclicBehaviour;
+import jade.core.behaviours.OneShotBehaviour;
+import jade.core.behaviours.ParallelBehaviour;
+import jade.core.behaviours.SequentialBehaviour;
+import jade.core.behaviours.SimpleBehaviour;
 import jade.domain.DFService;
 import jade.domain.FIPAException;
 import jade.domain.FIPAAgentManagement.DFAgentDescription;
@@ -126,6 +131,7 @@ public class AgenteMundo extends Agent {
 		addBehaviour(new MuertePersonaje());
 		addBehaviour(new PeticionesDePersonajes());
 		addBehaviour(new FinInteraccion());
+		addBehaviour(new Empareja());
 	}
 
 	protected void takeDown() {
@@ -155,6 +161,199 @@ public class AgenteMundo extends Agent {
 			}
 		}
 		
+	}
+	
+	// Empareja personajes en la misma localización
+	private class Empareja extends CyclicBehaviour {
+
+		@Override
+		public void action() {
+			for (String loc : estado.getLocations().split(" ")) {
+				for (String pers : estado.getPersonajes(loc).split(" ")) {
+					if (interacciones.get(pers) == null) {
+						String pareja = buscaPareja(pers);
+						
+						if (!pareja.equals("")) {
+							enviaNotificacion(pers, pareja, loc);
+							
+							AgenteMundo.this.addBehaviour(new ConfirmaEmparejamiento(pers, pareja));
+						}
+					}
+				}
+			}
+		}
+		
+		public String buscaPareja(String pers) {
+			// TODO: Comprobar que la pareja no esté interactuando ya 
+			String [] persEnLoc = estado.personajesEnLoc(pers).split(" ");
+			
+			return persEnLoc[(new Random()).nextInt(persEnLoc.length)];
+		}
+		
+		public void enviaNotificacion(String mstr, String slv, String loc) {
+			ACLMessage notify = new ACLMessage(ACLMessage.INFORM);
+			notify.addReceiver(new AID(mstr, AID.ISLOCALNAME));
+			notify.addReceiver(new AID(slv, AID.ISLOCALNAME));
+			notify.setConversationId("Emparejamiento");
+			notify.setContent(loc);
+			send(notify);
+		}
+		
+	}
+	
+	// Recibe la respuesta de las parejas. Si ambas OK, la interacción comienza.
+//	private class ConfirmaEmparejamiento extends OneShotBehaviour {
+//		private String mstr, slv;
+//		
+//		public ConfirmaEmparejamiento(String master, String slave) {
+//			mstr = master;
+//			slv = slave;
+//		}
+//		@Override
+//		public void action() {
+//			MessageTemplate mt = MessageTemplate.MatchConversationId("Emparejamiento");
+//			
+//			// Recibe mensaje mstr
+//			ACLMessage receive_mstr = myAgent.receive(mt);
+//			
+//			// Recibe mensaje slv
+//			ACLMessage receive_slv = myAgent.receive(mt);
+//			
+//			while(receive_mstr == null || receive_slv == null) {
+//				if (receive_mstr == null) receive_mstr = myAgent.receive(mt);
+//				if (receive_slv == null) receive_slv = myAgent.receive(mt);
+//				block();
+//			}
+//			
+//			// Si ambos responden OK (están en la misma loc) se continúa con la interacción
+//			
+//			ACLMessage ok_mstr = new ACLMessage(ACLMessage.INFORM), ok_slv = new ACLMessage(ACLMessage.INFORM);
+//			
+//			ok_mstr.addReceiver(receive_mstr.getSender());
+//			ok_slv.addReceiver(receive_slv.getSender());
+//			
+//			ok_mstr.setConversationId("Confirma_emparejamiento");
+//			ok_slv.setConversationId("Confirma_emparejamiento");
+//			
+//			if (receive_mstr.getPerformative() == ACLMessage.CONFIRM && 
+//					receive_slv.getPerformative() == ACLMessage.CONFIRM) {
+//				
+//				String master = receive_mstr.getSender().getLocalName(), 
+//						slave = receive_slv.getSender().getLocalName();
+//				
+//				interacciones.put(master, slave);
+//				interacciones.put(slave, master);
+//				
+//				ok_mstr.setPerformative(ACLMessage.CONFIRM);
+//				ok_slv.setPerformative(ACLMessage.CONFIRM);
+//				
+//				ok_mstr.setContent(slave + " MSTR");
+//				ok_slv.setContent(mstr + " SLV");
+//			} else {
+//				ok_mstr.setPerformative(ACLMessage.FAILURE);
+//				ok_slv.setPerformative(ACLMessage.FAILURE);
+//			}
+//			
+//			send(ok_mstr);
+//		}
+//	}
+	
+	// TODO: Comprobar receptores
+	private abstract class RecibeMensajeEmparejamiento extends SimpleBehaviour {
+
+		private boolean finished;
+		private ACLMessage msg;
+		private String sender; 
+		
+		public RecibeMensajeEmparejamiento(String snd) {
+			sender = snd;
+		}
+		
+		public boolean done() {
+			return finished;
+		}
+
+		public void action() {
+			MessageTemplate mt = MessageTemplate.and(
+					MessageTemplate.MatchConversationId("Emparejamiento"),
+					MessageTemplate.MatchSender(new AID(sender, AID.ISLOCALNAME)));
+			
+			msg = myAgent.receive(mt);
+
+			if( msg != null) {
+				finished = true;
+				handle(msg);
+				return;
+			}
+		}
+		
+		public int onEnd() {
+			System.out.println("Fin " + sender);
+			return 0;
+		}
+		
+		public abstract void handle( ACLMessage m);
+	}
+	
+	private class ConfirmaEmparejamiento extends SequentialBehaviour {
+		
+		private int msg1performative, msg2performative;
+		private String mstr, slv;
+		
+		public ConfirmaEmparejamiento(String master, String slave) {
+			super();
+			mstr = master;
+			slv = slave;
+			
+			ParallelBehaviour par = new ParallelBehaviour(ParallelBehaviour.WHEN_ALL);
+			
+			par.addSubBehaviour(new RecibeMensajeEmparejamiento(mstr) {
+				public void handle(ACLMessage m) {
+					msg1performative = m.getPerformative();
+				}
+			});
+			
+			par.addSubBehaviour(new RecibeMensajeEmparejamiento(slv) {
+				public void handle(ACLMessage m) {
+					msg2performative = m.getPerformative();
+				}
+			});
+			
+			addSubBehaviour(par);
+			
+			OneShotBehaviour confirm = new OneShotBehaviour() {
+				@Override
+				public void action() {
+					ACLMessage ok_mstr = new ACLMessage(ACLMessage.INFORM), ok_slv = new ACLMessage(ACLMessage.INFORM);
+					
+					ok_mstr.addReceiver(new AID(mstr, AID.ISLOCALNAME));
+					ok_slv.addReceiver(new AID(slv, AID.ISLOCALNAME));
+					
+					ok_mstr.setConversationId("Confirma_emparejamiento");
+					ok_slv.setConversationId("Confirma_emparejamiento");
+					
+					if (msg1performative == ACLMessage.CONFIRM && 
+							msg2performative == ACLMessage.CONFIRM) {
+						
+						interacciones.put(mstr, slv);
+						interacciones.put(slv, mstr);
+						
+						ok_mstr.setPerformative(ACLMessage.CONFIRM);
+						ok_slv.setPerformative(ACLMessage.CONFIRM);
+						
+						ok_mstr.setContent(slv + " MSTR");
+						ok_slv.setContent(mstr + " SLV");
+					} else {
+						ok_mstr.setPerformative(ACLMessage.FAILURE);
+						ok_slv.setPerformative(ACLMessage.FAILURE);
+					}
+					
+					send(ok_mstr);
+				}
+			};
+			
+			addSubBehaviour(confirm);
+		}
 	}
 
 	private class PeticionesDePersonajes extends CyclicBehaviour {
@@ -186,13 +385,7 @@ public class AgenteMundo extends Agent {
 
 						reply.setContent(pareja + " MSTR");
 						send(reply);
-
-//						ACLMessage msj = new ACLMessage(ACLMessage.INFORM);
-//						msj.addReceiver(new AID(pareja, AID.ISLOCALNAME));
-//						msj.setConversationId("peerRequest");
-//						msj.setContent(sender + " SLV");
-//						send(msj);
-
+						
 					} else if (pareja.equalsIgnoreCase("")) 
 						send(reply);	
 					
@@ -365,7 +558,7 @@ public class AgenteMundo extends Agent {
 					reply.setPerformative(ACLMessage.FAILURE);
 
 				send(reply);
-				eliminaInteraccion(personaje.getLocalName());
+				//eliminaInteraccion(personaje.getLocalName());
 
 			} else
 				block();

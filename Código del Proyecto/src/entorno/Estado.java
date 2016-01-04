@@ -39,12 +39,16 @@ public class Estado {
 		
 	}
 	
-	// Devuelve los personajes en la localización loc, a excepción del mismo
-	public String personajesEnLoc(String loc, String personaje) {
+	public String getLocations() {
+		return adyacencias.keySet().toString().replace("[", "").replace("]", "").replace(",", "");
+	}
+	
+	// Devuelve los personajes en la localización loc
+	public String getPersonajes(String loc) {
 		String personajes = "";
 		
 		for (String pers : persEnLoc.keySet())
-			if (persEnLoc.get(pers).equalsIgnoreCase(loc) && !pers.equalsIgnoreCase(personaje))
+			if (persEnLoc.get(pers).equalsIgnoreCase(loc))
 				personajes = pers + " " + personajes;
 		
 		return personajes;

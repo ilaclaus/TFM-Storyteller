@@ -336,43 +336,56 @@ public class Personaje extends Agent {
 		
 		FSMBehaviour m = new FSMBehaviour(this);
 		
+//		m.registerFirstState(new DarUnPaseo(), "Paseo");
+//		m.registerState(new PidePersonajes(), "Pide personajes");
+//		m.registerState(new InteractuaMSTR(), "Interactua-MSTR");
+//		m.registerState(new InteractuaSLV(), "Interactua-SLV");
+//		
+//		m.registerDefaultTransition("Paseo", "Pide personajes");
+//		m.registerTransition("Pide personajes", "Paseo", 0);
+//		m.registerTransition("Pide personajes", "Interactua-MSTR", 1);
+//		m.registerTransition("Pide personajes", "Interactua-SLV", 2);
+//		m.registerTransition("Interactua-SLV", "Paseo", 0);
+//		m.registerTransition("Interactua-SLV", "Interactua-SLV", 1);
+//		m.registerDefaultTransition("Interactua-MSTR", "Paseo");
+		
 		m.registerFirstState(new DarUnPaseo(), "Paseo");
-		m.registerState(new PidePersonajes(), "Pide personajes");
 		m.registerState(new InteractuaMSTR(), "Interactua-MSTR");
 		m.registerState(new InteractuaSLV(), "Interactua-SLV");
 		
-		m.registerDefaultTransition("Paseo", "Pide personajes");
-		m.registerTransition("Pide personajes", "Paseo", 0);
-		m.registerTransition("Pide personajes", "Interactua-MSTR", 1);
-		m.registerTransition("Pide personajes", "Interactua-SLV", 2);
-		m.registerTransition("Interactua-SLV", "Paseo", 0);
-		m.registerTransition("Interactua-SLV", "Interactua-SLV", 1);
+		m.registerTransition("Paseo", "Paseo", 0);
+		m.registerTransition("Paseo", "Interactua-MSTR", 1);
+		m.registerTransition("Paseo", "Interactua-SLV", 2);
 		m.registerDefaultTransition("Interactua-MSTR", "Paseo");
+		m.registerDefaultTransition("Interactua-SLV", "Paseo");
 		
 		addBehaviour(m);
+		addBehaviour(new ObtenerPareja());
 		addBehaviour(new RespondeSaludo());
 
 	}
-	
-	private class Pasea extends CyclicBehaviour {
+	// TODO: Revisar. El paseo es demasiado rápido y nunca se producen interacciones.
 
-		@Override
-		public void action() {
-			(new Pasear(Personaje.this, Personaje.this.localizacion, agenteMundo)).execute();
-		}
-		
-	}
-	
 	private class DarUnPaseo extends OneShotBehaviour {
 
 		@Override
 		public void action() {
-			// TODO: Hacer que los personajes en la misma localización interactúen ¿? 
-			(new Pasear(Personaje.this, Personaje.this.localizacion, agenteMundo)).execute();
+			if (!localizacion.equalsIgnoreCase("Castillo"))
+				(new Pasear(Personaje.this, Personaje.this.localizacion, agenteMundo)).execute();
+		}
+		
+		public int onEnd() {
+			// Si no tiene pareja, a pasear
+			if (persInteraccion == null)
+				return 0;
 			
-			/*
-			 * Máquina de estados: Paseo -> Pide personajes -> Saludo o Pasar de largo
-			 */
+			// Si tiene pareja y es maestro, a interactuar como un maestro
+			else if (maestro)
+				return 1;
+			
+			// Si tiene pareja y es esclavo, a interactuar como un esclavo
+			else 
+				return 2;
 		}
 	}
 	
@@ -433,13 +446,13 @@ public class Personaje extends Agent {
 		@Override
 		public void action() {
 			// El maestro es el que ejecuta las acciones
-			if ((Personaje.this.getLocalName().equalsIgnoreCase("Arturo") && persInteraccion.equalsIgnoreCase("Draco")))
-				(new Batalla(Personaje.this, persInteraccion)).execute();
-
-			else {
+//			if ((Personaje.this.getLocalName().equalsIgnoreCase("Arturo") && persInteraccion.equalsIgnoreCase("Draco")))
+//				(new Batalla(Personaje.this, persInteraccion)).execute();
+//
+//			else {
 				System.out.println(Personaje.this.getLocalName() + " saluda a " + persInteraccion + " en " + localizacion);
 				(new Saludo(Personaje.this, persInteraccion)).execute();
-			}
+//			}
 
 			ACLMessage interaccionCompleta = new ACLMessage(ACLMessage.INFORM);
 			interaccionCompleta.addReceiver(new AID(persInteraccion, AID.ISLOCALNAME));
@@ -484,12 +497,138 @@ public class Personaje extends Agent {
 			ACLMessage receive = myAgent.receive(mt);
 			
 			if (receive != null) {
-					// Si no estan en la misma localización, no hacer nada
-					System.out.println(Personaje.this.getLocalName() + " le devuelve el saludo a " + receive.getSender().getLocalName() + " en " + localizacion);
+				// Si no estan en la misma localización, no hacer nada
+				System.out.println(Personaje.this.getLocalName() + " le devuelve el saludo a " + receive.getSender().getLocalName() + " en " + localizacion);
+
+				ACLMessage response = receive.createReply();
+				send(response);
+			} else block();
+		}
+	}
+	
+	// Periodicamente, el agente mundo empareja personajes en la misma localización. 
+//	private class ObtenerPareja extends CyclicBehaviour {
+//
+//		@Override
+//		public void action() {
+//			MessageTemplate mt = MessageTemplate.and(
+//					MessageTemplate.MatchPerformative(ACLMessage.INFORM),
+//					MessageTemplate.MatchConversationId("Emparejamiento"));
+//			ACLMessage receive = myAgent.receive(mt);
+//			
+//			if (receive != null) {
+//				// Se recibe el nombre de la pareja + MSTR/SLV + loc
+//				
+//				String msg [] = receive.getContent().split(" ");
+//				
+//				ACLMessage conf = receive.createReply();
+//				
+//				if (msg[2].equalsIgnoreCase(localizacion))	
+//					conf.setPerformative(ACLMessage.CONFIRM);
+//				else
+//					conf.setPerformative(ACLMessage.FAILURE);
+//				
+//				send(conf);
+//
+//
+//				MessageTemplate mtConf = MessageTemplate.MatchConversationId("Confirma_emparejamiento");
+//				ACLMessage ok = myAgent.blockingReceive(mtConf); //////////
+//				
+//				if (ok.getPerformative() == ACLMessage.CONFIRM) {	
+//					// Recibido el OK, comenzamos la interacción
+//					persInteraccion = msg[0];
+//					
+//					if (msg[1].equals("MSTR"))
+//						maestro = true;
+//					
+//					else
+//						maestro = false;
+//				}
+//				
+//			} else block();
+//		}
+//		
+//	}
+	
+	private class RecibeNotificacionEmparejamiento extends OneShotBehaviour {
+
+		private ACLMessage receive;
+		@Override
+		public void action() {
+			MessageTemplate mt = MessageTemplate.and(
+					MessageTemplate.MatchPerformative(ACLMessage.INFORM),
+					MessageTemplate.MatchConversationId("Emparejamiento"));
+			receive = myAgent.receive(mt);
+			
+			if (receive != null) {
+				// Se recibe la loc donde tendrá lugar la interacción			
+				String msg [] = receive.getContent().split(" ");
+				
+				ACLMessage conf = receive.createReply();
+				
+				if (msg[0].equalsIgnoreCase(localizacion))	
+					conf.setPerformative(ACLMessage.CONFIRM);
+				else
+					conf.setPerformative(ACLMessage.FAILURE);
+				
+				send(conf);
+			} else block();
+		} 
+		
+		public int onEnd() {
+			if (receive != null)
+				return 0;
+			
+			else 
+				return 1;
+		}
+	}
+	
+	private class RecibeConfirmacionEmparejamiento extends OneShotBehaviour {
+
+		private ACLMessage ok;
+		
+		@Override
+		public void action() {
+			MessageTemplate mtConf = MessageTemplate.MatchConversationId("Confirma_emparejamiento");
+			ok = myAgent.receive(mtConf);
+			
+			if (ok != null) {
+				if (ok.getPerformative() == ACLMessage.CONFIRM) {
+					// Recibido el OK, comenzamos la interacción
+					String msg [] = ok.getContent().split(" ");
 					
-					ACLMessage response = receive.createReply();
-					send(response);
-			}
+					persInteraccion = msg[0];
+
+					if (msg[1].equals("MSTR"))
+						maestro = true;
+
+					else
+						maestro = false;
+				}
+			} else block();
+		}
+		
+		public int onEnd() {
+			if (ok != null)
+				return 0;
+			
+			else 
+				return 1;
+		}
+	}
+	
+	private class ObtenerPareja extends FSMBehaviour {
+		public ObtenerPareja() {
+			super();
+			
+			registerFirstState(new RecibeNotificacionEmparejamiento(), "Notificacion");
+			registerState(new RecibeConfirmacionEmparejamiento(), "Confirmacion");
+			
+			registerTransition("Notificacion", "Confirmacion", 0);
+			registerTransition("Notificacion", "Notificacion", 1);
+			registerTransition("Confirmacion", "Notificacion", 0);
+			registerTransition("Confirmacion", "Confirmacion", 1);
 		}
 	}
 	
