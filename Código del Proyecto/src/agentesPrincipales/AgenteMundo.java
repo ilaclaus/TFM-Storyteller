@@ -129,7 +129,7 @@ public class AgenteMundo extends Agent {
 		addBehaviour(new PersonajeEnCasa());
 		addBehaviour(new ConvertirEnHeroe());
 		addBehaviour(new MuertePersonaje());
-		addBehaviour(new PeticionesDePersonajes());
+		//addBehaviour(new PeticionesDePersonajes());
 		addBehaviour(new FinInteraccion());
 		addBehaviour(new Empareja());
 	}
@@ -207,6 +207,7 @@ public class AgenteMundo extends Agent {
 	}
 	
 	// Recibe la respuesta de las parejas. Si ambas OK, la interacción comienza.
+	/*
 //	private class ConfirmaEmparejamiento extends OneShotBehaviour {
 //		private String mstr, slv;
 //		
@@ -261,9 +262,9 @@ public class AgenteMundo extends Agent {
 //			
 //			send(ok_mstr);
 //		}
-//	}
+//	}*/
 	
-	// TODO: Comprobar receptores
+
 	private abstract class RecibeMensajeEmparejamiento extends SimpleBehaviour {
 
 		private boolean finished;
@@ -312,6 +313,7 @@ public class AgenteMundo extends Agent {
 			
 			ParallelBehaviour par = new ParallelBehaviour(ParallelBehaviour.WHEN_ALL);
 			
+			///////////////////////////////////////////////////////////////////////////
 			par.addSubBehaviour(new RecibeMensajeEmparejamiento(mstr) {
 				public void handle(ACLMessage m) {
 					msg1performative = m.getPerformative();
@@ -361,65 +363,66 @@ public class AgenteMundo extends Agent {
 		}
 	}
 
-	private class PeticionesDePersonajes extends CyclicBehaviour {
-
-		@Override
-		public void action() {
-			MessageTemplate mt = MessageTemplate.and(
-					MessageTemplate.MatchPerformative(ACLMessage.REQUEST),
-					MessageTemplate.MatchConversationId("peerRequest"));
-			ACLMessage receive = myAgent.receive(mt);
-
-			// Si no está interactuando con nadie, se busca una pareja 
-			// que tampoco esté interactuando con nadie, y se añade al Map de interacciones. 
-			if (receive != null) {
-				String sender = receive.getSender().getLocalName();
-				//buscandoPareja.add(sender);
-				
-
-				ACLMessage reply = receive.createReply();
-				reply.setPerformative(ACLMessage.INFORM);
-				
-				if (interacciones.get(sender) == null) {
-					// El personaje no está interactuando, por lo que habrá que buscarle pareja
-					String pareja = buscaPareja(sender);
-					
-					if (!estaInteractuando(sender) && !pareja.equalsIgnoreCase("")) {
-						interacciones.put(sender, pareja);
-						interacciones.put(pareja, sender);
-
-						reply.setContent(pareja + " MSTR");
-						send(reply);
-						
-					} else if (pareja.equalsIgnoreCase("")) 
-						send(reply);	
-					
-				} else {
-					// El personaje ya tiene una pareja asignada
-					reply.setContent(interacciones.get(sender) + " SLV");
-					send(reply);
-				}
-				
-				//buscandoPareja.remove(sender);
-			} else block();
-		}
-		
-		private String buscaPareja(String personaje) {
-			String [] persEnLoc = estado.personajesEnLoc(personaje).split(" ");
-			
-//			for (String p : buscandoPareja)
-//				if (estado.estanMismaLocalizacion(personaje, p) && 
-//						!p.equalsIgnoreCase(personaje) && !estaInteractuando(p))
-//					pareja = p;
-			
-			return persEnLoc[0];
-		}
-		
-		private boolean estaInteractuando(String personaje) {
-			return interacciones.containsKey(personaje) || interacciones.containsValue(personaje);
-		}
-
-	}
+	/*
+//	private class PeticionesDePersonajes extends CyclicBehaviour {
+//
+//		@Override
+//		public void action() {
+//			MessageTemplate mt = MessageTemplate.and(
+//					MessageTemplate.MatchPerformative(ACLMessage.REQUEST),
+//					MessageTemplate.MatchConversationId("peerRequest"));
+//			ACLMessage receive = myAgent.receive(mt);
+//
+//			// Si no está interactuando con nadie, se busca una pareja 
+//			// que tampoco esté interactuando con nadie, y se añade al Map de interacciones. 
+//			if (receive != null) {
+//				String sender = receive.getSender().getLocalName();
+//				//buscandoPareja.add(sender);
+//				
+//
+//				ACLMessage reply = receive.createReply();
+//				reply.setPerformative(ACLMessage.INFORM);
+//				
+//				if (interacciones.get(sender) == null) {
+//					// El personaje no está interactuando, por lo que habrá que buscarle pareja
+//					String pareja = buscaPareja(sender);
+//					
+//					if (!estaInteractuando(sender) && !pareja.equalsIgnoreCase("")) {
+//						interacciones.put(sender, pareja);
+//						interacciones.put(pareja, sender);
+//
+//						reply.setContent(pareja + " MSTR");
+//						send(reply);
+//						
+//					} else if (pareja.equalsIgnoreCase("")) 
+//						send(reply);	
+//					
+//				} else {
+//					// El personaje ya tiene una pareja asignada
+//					reply.setContent(interacciones.get(sender) + " SLV");
+//					send(reply);
+//				}
+//				
+//				//buscandoPareja.remove(sender);
+//			} else block();
+//		}
+//		
+//		private String buscaPareja(String personaje) {
+//			String [] persEnLoc = estado.personajesEnLoc(personaje).split(" ");
+//			
+////			for (String p : buscandoPareja)
+////				if (estado.estanMismaLocalizacion(personaje, p) && 
+////						!p.equalsIgnoreCase(personaje) && !estaInteractuando(p))
+////					pareja = p;
+//			
+//			return persEnLoc[0];
+//		}
+//		
+//		private boolean estaInteractuando(String personaje) {
+//			return interacciones.containsKey(personaje) || interacciones.containsValue(personaje);
+//		}
+//
+//	}*/
 
 	private class ToPDDLfile extends CyclicBehaviour {
 
